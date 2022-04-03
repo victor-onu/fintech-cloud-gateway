@@ -1,0 +1,45 @@
+server:
+  port: ${PORT:9191}
+spring:
+  application:
+    name: API-GATEWAY
+  cloud:
+    gateway:
+      routes:
+        - id: NOTIFICATION-SERVICE
+          uri: lb://NOTIFICATION-SERVICE
+          predicates:
+            - Path=/api/emails/**
+        - id: ACCOUNT-SERVICE
+          uri: lb://ACCOUNT-SERVICE
+          predicates:
+            - Path=/api/account-owners/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: ACCOUNT-SERVICE
+                fallbackuri: forward:/accountServiceFallBack
+resilience4j:
+  circuitbreaker:
+    instances:
+      ACCOUNT-SERVICE:
+        slidingWindowSize: 10
+        permittedNumberOfCallsInHalfOpenState: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 1000
+        registerHealthIndicator: true
+  timelimiter:
+    instances:
+      ACCOUNT-SERVICE:
+        timeoutDuration: 5s
+
+
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: https://fintech-registry-service.herokuapp.com/eureka/
+  instance:
+    hostname: fintech-cloud-gateway.herokuapp.com
